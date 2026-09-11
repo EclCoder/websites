@@ -2,89 +2,89 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-
     <meta
         name="viewport"
-        content="width=device-width,
-                 initial-scale=1.0,
-                 maximum-scale=1.0,
-                 user-scalable=no"
+        content="width=device-width, initial-scale=1.0"
     >
 
-    <title>Python Turtle Animation</title>
+    <title>Code Animation</title>
 
-    <link rel="stylesheet" href="style.css">
+    <!-- Prism theme -->
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css"
+    >
+
+    <link rel="stylesheet" href="./style.css">
 </head>
 
 <body>
 
-    <!-- Virtual video: 1080 × 1920 -->
+<div id="video">
 
-    <main id="video">
+    <!-- =========================
+         SCENE 1: CODE EDITOR
+         ========================= -->
+    <section id="codeScene" class="scene active">
 
-        <!-- ================= CODE SCENE ================= -->
+        <div class="editor">
 
-        <section id="codeScene" class="scene active">
-
-            <div class="editor">
-
-                <div class="titlebar">
-
-                    <div class="traffic-lights">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-
-                    <div class="filename">
-                        main.py
-                    </div>
-
+            <div class="editor-top">
+                <div class="window-buttons">
+                    <span></span>
+                    <span></span>
+                    <span></span>
                 </div>
 
-                <div class="editor-body">
-
-                    <div
-                        id="lineNumbers"
-                        class="line-numbers"
-                    ></div>
-
-                    <div
-                        id="codeContainer"
-                        class="code-container"
-                    ></div>
-
+                <div class="file-name">
+                    main.py
                 </div>
+            </div>
+
+            <div class="editor-body">
+
+                <div id="lineNumbers" class="line-numbers"></div>
+
+                <pre id="codeArea"><code id="code"></code></pre>
 
             </div>
 
-        </section>
+        </div>
+
+    </section>
 
 
-        <!-- ================= OUTPUT SCENE ================= -->
+    <!-- =========================
+         SCENE 2: OUTPUT
+         ========================= -->
+    <section id="outputScene" class="scene">
 
-        <section id="outputScene" class="scene">
+        <div class="output-window">
 
-            <div class="output-window">
-
-                <div class="output-title">
-                    OUTPUT
-                </div>
-
-                <canvas
-                    id="turtleCanvas"
-                    width="800"
-                    height="800"
-                ></canvas>
-
+            <div class="output-title">
+                Output
             </div>
 
-        </section>
+            <canvas
+                id="turtleCanvas"
+                width="800"
+                height="800"
+            ></canvas>
 
-    </main>
+        </div>
+
+    </section>
+
+</div>
 
 
-    <script type="module" src="script.js"></script>
+<!-- Prism -->
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+
+<!-- Python grammar -->
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+
+<script src="./script.js"></script>
 
 </body>
 </html>
