@@ -1,28 +1,6 @@
-import { createHighlighter } from
-    "https://esm.sh/shiki@3";
-
-
 /*
 =========================================================
-CONFIG
-=========================================================
-*/
-
-const CONFIG = {
-
-    typingSpeed: 32,
-
-    linePause: 120,
-
-    outputDelay: 140,
-
-    turtleSpeed: 650
-};
-
-
-/*
-=========================================================
-PYTHON CODE
+PYTHON SOURCE
 =========================================================
 */
 
@@ -41,24 +19,80 @@ t.forward(250)`;
 
 /*
 =========================================================
+ANIMATION CONFIG
+=========================================================
+*/
+
+const CONFIG = {
+
+    /*
+        Time between characters.
+    */
+
+    typingSpeed: 32,
+
+
+    /*
+        Pause after Enter.
+    */
+
+    linePause: 120,
+
+
+    /*
+        Delay after code finishes
+        before switching scene.
+    */
+
+    outputDelay: 120,
+
+
+    /*
+        Pause after final character.
+    */
+
+    finalCodePause: 450,
+
+
+    /*
+        Turtle drawing speed.
+    */
+
+    turtleSpeed: 650
+
+};
+
+
+/*
+=========================================================
 DOM
 =========================================================
 */
 
 const codeContainer =
-    document.getElementById("codeContainer");
+    document.getElementById(
+        "codeContainer"
+    );
 
 const lineNumbers =
-    document.getElementById("lineNumbers");
+    document.getElementById(
+        "lineNumbers"
+    );
 
 const codeScene =
-    document.getElementById("codeScene");
+    document.getElementById(
+        "codeScene"
+    );
 
 const outputScene =
-    document.getElementById("outputScene");
+    document.getElementById(
+        "outputScene"
+    );
 
 const canvas =
-    document.getElementById("turtleCanvas");
+    document.getElementById(
+        "turtleCanvas"
+    );
 
 const ctx =
     canvas.getContext("2d");
@@ -66,93 +100,237 @@ const ctx =
 
 /*
 =========================================================
-SHIKI
+PRISM
 =========================================================
 */
 
-const highlighter =
-    await createHighlighter({
-
-        themes: [
-            "github-dark"
-        ],
-
-        langs: [
-            "python"
-        ]
-
-    });
+const prismTokens =
+    Prism.tokenize(
+        pythonCode,
+        Prism.languages.python
+    );
 
 
 /*
 =========================================================
-TOKENIZE
+TOKEN → CHARACTER MAP
+=========================================================
+
+Prism returns nested Token objects.
+
+We flatten them into:
+
+[
+    {
+        char: "i",
+        tokenId: 0,
+        colorClass: "keyword",
+        tokenEnd: false
+    },
+
+    ...
+]
+
+This allows us to type one character
+at a time while highlighting the
+WHOLE token only after it finishes.
 =========================================================
 */
 
-function tokenizePython(code) {
-
-    const result =
-        highlighter.codeToTokens(
-            code,
-            {
-                lang: "python",
-                theme: "github-dark"
-            }
-        );
-
-    return result.tokens;
-}
-
-
-/*
-=========================================================
-BUILD TOKEN MAP
-=========================================================
-*/
-
-function buildCharacterMap(code) {
-
-    const tokens =
-        tokenizePython(code);
+function buildCharacterMap(tokens) {
 
     const characters = [];
 
-    let tokenIndex = 0;
+    let tokenId = 0;
+
+
+    function processToken(token) {
+
+        /*
+            Plain text
+        */
+
+        if (typeof token === "string") {
+
+            for (
+                let i = 0;
+                i < token.length;
+                i++
+            ) {
+
+                characters.push({
+
+                    char: token[i],
+
+                    tokenId,
+
+                    tokenEnd:
+                        i === token.length - 1,
+
+                    tokenClass:
+                        null
+
+                });
+            }
+
+            tokenId++;
+
+            return;
+        }
+
+
+        /*
+            Prism Token
+        */
+
+        const classes =
+            token.type || "";
+
+
+        /*
+            Token can contain nested tokens.
+        */
+
+        if (Array.isArray(token.content)) {
+
+            for (
+                const child
+                of token.content
+            ) {
+
+                processNestedToken(
+                    child,
+                    classes
+                );
+            }
+
+        } else {
+
+            const text =
+                String(token.content);
+
+            for (
+                let i = 0;
+                i < text.length;
+                i++
+            ) {
+
+                characters.push({
+
+                    char: text[i],
+
+                    tokenId,
+
+                    tokenEnd:
+                        i === text.length - 1,
+
+                    tokenClass:
+                        classes
+
+                });
+            }
+
+            tokenId++;
+        }
+    }
+
+
+    function processNestedToken(
+        token,
+        parentClass
+    ) {
+
+        if (typeof token === "string") {
+
+            for (
+                let i = 0;
+                i < token.length;
+                i++
+            ) {
+
+                characters.push({
+
+                    char: token[i],
+
+                    tokenId,
+
+                    tokenEnd:
+                        i === token.length - 1,
+
+                    tokenClass:
+                        parentClass
+
+                });
+            }
+
+            tokenId++;
+
+            return;
+        }
+
+
+        const classes =
+            token.type || parentClass;
+
+
+        if (Array.isArray(token.content)) {
+
+            for (
+                const child
+                of token.content
+            ) {
+
+                processNestedToken(
+                    child,
+                    classes
+                );
+            }
+
+        } else {
+
+            const text =
+                String(token.content);
+
+            for (
+                let i = 0;
+                i < text.length;
+                i++
+            ) {
+
+                characters.push({
+
+                    char: text[i],
+
+                    tokenId,
+
+                    tokenEnd:
+                        i === text.length - 1,
+
+                    tokenClass:
+                        classes
+
+                });
+            }
+
+            tokenId++;
+        }
+    }
+
 
     for (const token of tokens) {
 
-        const text =
-            token.content;
-
-        const color =
-            token.color || "#c9d1d9";
-
-        for (
-            let i = 0;
-            i < text.length;
-            i++
-        ) {
-
-            characters.push({
-
-                char: text[i],
-
-                color: color,
-
-                tokenIndex,
-
-                tokenEnd:
-                    i === text.length - 1
-
-            });
-        }
-
-        tokenIndex++;
+        processToken(token);
     }
+
 
     return characters;
 }
+
+
+const characters =
+    buildCharacterMap(
+        prismTokens
+    );
 
 
 /*
@@ -167,32 +345,40 @@ function createEditor() {
 
     lineNumbers.innerHTML = "";
 
+
     const lines =
         pythonCode.split("\n");
 
 
     /*
-    Line numbers
+        Line numbers
     */
 
-    lines.forEach((_, index) => {
+    for (
+        let i = 0;
+        i < lines.length;
+        i++
+    ) {
 
         const number =
             document.createElement("div");
 
         number.textContent =
-            index + 1;
+            i + 1;
 
-        lineNumbers.appendChild(number);
-
-    });
+        lineNumbers.appendChild(
+            number
+        );
+    }
 
 
     /*
-    Code lines
+        Code lines
     */
 
-    for (const line of lines) {
+    for (
+        const line of lines
+    ) {
 
         const div =
             document.createElement("div");
@@ -200,7 +386,9 @@ function createEditor() {
         div.className =
             "code-line";
 
-        codeContainer.appendChild(div);
+        codeContainer.appendChild(
+            div
+        );
     }
 }
 
@@ -215,50 +403,76 @@ async function typeCode() {
 
     createEditor();
 
-    const characters =
-        buildCharacterMap(pythonCode);
 
-    let currentLine = 0;
+    let lineIndex = 0;
 
-    let currentLineElement =
-        codeContainer.children[currentLine];
+    let currentLine =
+        codeContainer.children[
+            lineIndex
+        ];
 
+
+    /*
+        Cursor
+    */
 
     const cursor =
-        document.createElement("span");
+        document.createElement(
+            "span"
+        );
 
     cursor.className =
         "cursor";
 
 
     /*
-    Track token spans.
+        Current token tracking
     */
 
-    let currentTokenIndex = -1;
+    let activeTokenId = null;
 
-    let currentTokenSpans = [];
+    let activeTokenSpans = [];
 
 
-    for (const item of characters) {
+    for (
+        const item
+        of characters
+    ) {
 
 
         /*
-        New line
+        =============================================
+        NEW LINE
+        =============================================
         */
 
         if (item.char === "\n") {
 
-            currentLine++;
+            /*
+                Remove cursor from
+                previous line.
+            */
 
-            currentLineElement =
+            if (
+                cursor.parentNode
+            ) {
+
+                cursor.remove();
+            }
+
+
+            lineIndex++;
+
+            currentLine =
                 codeContainer.children[
-                    currentLine
+                    lineIndex
                 ];
 
-            currentTokenIndex = -1;
 
-            currentTokenSpans = [];
+            activeTokenId = null;
+
+            activeTokenSpans = [];
+
 
             await sleep(
                 CONFIG.linePause
@@ -269,27 +483,33 @@ async function typeCode() {
 
 
         /*
-        New token
+        =============================================
+        NEW TOKEN
+        =============================================
         */
 
         if (
-            item.tokenIndex !==
-            currentTokenIndex
+            item.tokenId !==
+            activeTokenId
         ) {
 
-            currentTokenIndex =
-                item.tokenIndex;
+            activeTokenId =
+                item.tokenId;
 
-            currentTokenSpans = [];
+            activeTokenSpans = [];
         }
 
 
         /*
-        Character
+        =============================================
+        CREATE CHARACTER
+        =============================================
         */
 
         const span =
-            document.createElement("span");
+            document.createElement(
+                "span"
+            );
 
         span.className =
             "code-char";
@@ -297,30 +517,65 @@ async function typeCode() {
         span.textContent =
             item.char;
 
-        span.style.setProperty(
-            "--token-color",
-            item.color
-        );
 
+        /*
+            Determine token color.
+        */
 
-        currentTokenSpans.push(span);
+        if (
+            item.tokenClass
+        ) {
+
+            span.classList.add(
+                "token",
+                item.tokenClass
+            );
+        }
 
 
         /*
-        Put cursor after character.
+            Prism doesn't directly
+            provide our CSS variable.
+
+            Find the token's computed
+            color variable from its class.
         */
 
-        currentLineElement.appendChild(
+        const color =
+            getTokenColor(
+                item.tokenClass
+            );
+
+        span.style.setProperty(
+            "--token-color",
+            color
+        );
+
+
+        activeTokenSpans.push(
             span
         );
 
-        currentLineElement.appendChild(
+
+        /*
+        =============================================
+        INSERT CHARACTER
+        =============================================
+        */
+
+        currentLine.appendChild(
+            span
+        );
+
+        currentLine.appendChild(
             cursor
         );
 
 
         /*
-        Typing delay
+        =============================================
+        TYPING DELAY
+        =============================================
         */
 
         await sleep(
@@ -329,14 +584,18 @@ async function typeCode() {
 
 
         /*
-        Highlight the COMPLETE token.
+        =============================================
+        TOKEN COMPLETE
+        =============================================
         */
 
-        if (item.tokenEnd) {
+        if (
+            item.tokenEnd
+        ) {
 
             for (
                 const charSpan
-                of currentTokenSpans
+                of activeTokenSpans
             ) {
 
                 charSpan.classList.add(
@@ -344,15 +603,76 @@ async function typeCode() {
                 );
             }
 
+            activeTokenSpans = [];
         }
     }
 
 
     /*
-    Final cursor pause.
+        Final cursor pause.
     */
 
-    await sleep(450);
+    await sleep(
+        CONFIG.finalCodePause
+    );
+}
+
+
+/*
+=========================================================
+TOKEN COLORS
+=========================================================
+*/
+
+function getTokenColor(type) {
+
+    switch (type) {
+
+        case "keyword":
+            return "#ff7b72";
+
+        case "function":
+            return "#d2a8ff";
+
+        case "class-name":
+            return "#ffa657";
+
+        case "number":
+            return "#79c0ff";
+
+        case "string":
+            return "#a5d6ff";
+
+        case "comment":
+            return "#8b949e";
+
+        case "operator":
+            return "#ff7b72";
+
+        case "builtin":
+            return "#79c0ff";
+
+        case "boolean":
+            return "#79c0ff";
+
+        default:
+            return "#c9d1d9";
+    }
+}
+
+
+/*
+=========================================================
+SLEEP
+=========================================================
+*/
+
+function sleep(ms) {
+
+    return new Promise(
+        resolve =>
+            setTimeout(resolve, ms)
+    );
 }
 
 
@@ -375,7 +695,7 @@ function clearCanvas() {
 
 /*
 =========================================================
-TURTLE LINE
+DRAW TURTLE LINE
 =========================================================
 */
 
@@ -398,12 +718,17 @@ function drawLine(
             const elapsed =
                 now - start;
 
+
             const progress =
                 Math.min(
                     elapsed / duration,
                     1
                 );
 
+
+            /*
+                Smooth easing.
+            */
 
             const eased =
                 1 -
@@ -415,18 +740,22 @@ function drawLine(
 
             const x =
                 x1 +
-                (x2 - x1) * eased;
+                (x2 - x1) *
+                eased;
 
             const y =
                 y1 +
-                (y2 - y1) * eased;
+                (y2 - y1) *
+                eased;
 
 
             clearCanvas();
 
 
             /*
-            Current line
+            =========================================
+            DRAW LINE
+            =========================================
             */
 
             ctx.beginPath();
@@ -454,7 +783,9 @@ function drawLine(
 
 
             /*
-            Turtle
+            =========================================
+            TURTLE
+            =========================================
             */
 
             ctx.beginPath();
@@ -473,7 +804,9 @@ function drawLine(
             ctx.fill();
 
 
-            if (progress < 1) {
+            if (
+                progress < 1
+            ) {
 
                 requestAnimationFrame(
                     frame
@@ -486,7 +819,9 @@ function drawLine(
         }
 
 
-        requestAnimationFrame(frame);
+        requestAnimationFrame(
+            frame
+        );
     });
 }
 
@@ -502,9 +837,22 @@ async function runTurtle() {
     clearCanvas();
 
 
+    /*
+        Start point.
+    */
+
     let x = 550;
+
     let y = 550;
 
+
+    /*
+        Square.
+
+        forward(250)
+        left(90)
+        ...
+    */
 
     const points = [
 
@@ -521,7 +869,10 @@ async function runTurtle() {
     ];
 
 
-    for (const [nx, ny] of points) {
+    for (
+        const [nx, ny]
+        of points
+    ) {
 
         await drawLine(
             x,
@@ -531,24 +882,11 @@ async function runTurtle() {
             CONFIG.turtleSpeed
         );
 
+
         x = nx;
+
         y = ny;
     }
-}
-
-
-/*
-=========================================================
-SLEEP
-=========================================================
-*/
-
-function sleep(ms) {
-
-    return new Promise(
-        resolve =>
-            setTimeout(resolve, ms)
-    );
 }
 
 
@@ -561,9 +899,9 @@ SHOW OUTPUT
 async function showOutput() {
 
     /*
-    Code finished.
+        Code is finished.
 
-    Wait a few milliseconds.
+        Wait a very short time.
     */
 
     await sleep(
@@ -572,7 +910,8 @@ async function showOutput() {
 
 
     /*
-    Switch scenes.
+        Switch from code
+        to output.
     */
 
     codeScene.classList.remove(
@@ -585,11 +924,11 @@ async function showOutput() {
 
 
     /*
-    Give browser one frame to
-    render the new scene.
+        Let browser render
+        output scene.
     */
 
-    await sleep(100);
+    await sleep(50);
 
 
     await runTurtle();
@@ -604,19 +943,38 @@ MAIN
 
 async function main() {
 
-    outputScene.classList.remove(
-        "active"
-    );
+    /*
+        Start with code.
+    */
 
     codeScene.classList.add(
         "active"
     );
 
+    outputScene.classList.remove(
+        "active"
+    );
+
+
+    /*
+        Type Python.
+    */
 
     await typeCode();
+
+
+    /*
+        Show Turtle output.
+    */
 
     await showOutput();
 }
 
+
+/*
+=========================================================
+START
+=========================================================
+*/
 
 main();
